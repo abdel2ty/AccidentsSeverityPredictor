@@ -1,19 +1,17 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 
-# Load model and scaler
-model = joblib.load('hgb_accident_model.pkl')
+# تحميل الموديل والـ scaler
+model = joblib.load('accident_severity_model.pkl')
 scaler = joblib.load('scaler.pkl')
 
 st.title("🚦 US Accidents Severity Predictor")
 
-# Sidebar user input
+# Sidebar for user input
 st.sidebar.header("Enter Accident Details")
 Hour = st.sidebar.slider("Hour", 0, 23, 8)
 Weekday = st.sidebar.slider("Weekday (0=Mon)", 0, 6, 0)
-Day = st.sidebar.slider("Day (1-31)", 1, 31, 1)  # العمود المفقود
 Month = st.sidebar.slider("Month", 1, 12, 1)
 Distance = st.sidebar.number_input("Distance (mi)", 0.0, 50.0, 0.5)
 Temperature = st.sidebar.number_input("Temperature (F)", -50.0, 120.0, 65.0)
@@ -30,11 +28,10 @@ Stop = st.sidebar.checkbox("Stop")
 Railway = st.sidebar.checkbox("Railway")
 Roundabout = st.sidebar.checkbox("Roundabout")
 
-# Build DataFrame
+# Prepare input DataFrame
 input_data = pd.DataFrame({
     'Hour':[Hour],
     'Weekday':[Weekday],
-    'Day':[Day],  # مهم جدًا
     'Month':[Month],
     'Distance(mi)':[Distance],
     'Temperature(F)':[Temperature],
@@ -52,29 +49,18 @@ input_data = pd.DataFrame({
     'Roundabout':[int(Roundabout)]
 })
 
-# Ensure columns order matches training
-expected_columns = ['Hour', 'Weekday', 'Day', 'Month', 'Distance(mi)',
-                    'Temperature(F)', 'Wind_Chill(F)', 'Humidity(%)',
-                    'Pressure(in)', 'Visibility(mi)', 'Wind_Speed(mph)',
-                    'Precipitation(in)', 'Traffic_Signal', 'Junction', 
-                    'Crossing', 'Stop', 'Railway', 'Roundabout']
-input_data = input_data[expected_columns]
-
 # Prediction function
 def predict_severity(df):
     try:
         df_scaled = scaler.transform(df)
         pred_class = model.predict(df_scaled)
-        if hasattr(model, "predict_proba"):
-            pred_proba = model.predict_proba(df_scaled).max(axis=1)
-        else:
-            pred_proba = np.ones(len(pred_class))  # fallback
+        pred_proba = model.predict_proba(df_scaled).max(axis=1)
         return pred_class, pred_proba
     except Exception as e:
-        st.error(f"❌ Prediction failed: {e}")
-        return ["Error"], [0]
+        st.error("❌ Prediction failed. Please check input features.")
+        return ["Error"], [0.0]
 
-# Make prediction
+# Run prediction
 pred_class, pred_proba = predict_severity(input_data)
 
 st.subheader("Predicted Accident Severity")
